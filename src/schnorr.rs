@@ -50,12 +50,12 @@ pub enum SchnorrError {
 ///     let hashed_msg = sha256::Hash::hash(b"This is some message");
 ///     let msg = hashed_msg.to_hex();
 ///     let secp = Secp256k1::new();
-///     assert!(schnorr::schnorr::sign_ecdsa(&secp, msg, seckey).is_ok());
+///     assert!(schnorr::schnorr::sign_ecdsa(&secp, msg, seckey.to_vec()).is_ok());
 /// ```
 pub fn sign_ecdsa<C: Signing>(
   secp: &Secp256k1<C>,
   msg: String,
-  seckey: [u8; 32],
+  seckey: Vec<u8>,
 ) -> Result<ecdsa::Signature, SchnorrError> {
   let hash_from_hex = sha256::Hash::from_hex(&msg)?;
   let msg = Message::from_slice(hash_from_hex.as_ref())?;
@@ -98,7 +98,7 @@ pub fn sign_ecdsa<C: Signing>(
 ///     };
 ///     let msg = "00960bd35499f8c63a4f65e79d6b1a2b7f1b8c97e76652325567b78c496350ae".to_string(); // already hashed message
 ///     let pubkey = "614a695bab54e8dc98946abdb8ec019599ece6dada0c23890977d0fa128081d6".to_string();
-///     let signature_ecdsa = schnorr::schnorr::sign_ecdsa(&secp, msg.clone(), seckey)
+///     let signature_ecdsa = schnorr::schnorr::sign_ecdsa(&secp, msg.clone(), seckey.to_vec())
 ///      .unwrap();
 ///      assert!(schnorr::schnorr::verify_ecdsa(&secp, msg, signature_ecdsa, pubkey).is_ok());
 /// ```
@@ -146,12 +146,12 @@ pub fn verify_ecdsa<C: Verification>(
 ///     let hashed_msg = sha256::Hash::hash(b"This is some message");
 ///     let msg = hashed_msg.to_hex();
 ///     let secp = Secp256k1::new();
-///     assert!(schnorr::schnorr::sign_schnorr(&secp, msg, seckey).is_ok());
+///     assert!(schnorr::schnorr::sign_schnorr(&secp, msg, seckey.to_vec()).is_ok());
 /// ```
 pub fn sign_schnorr<C: Signing>(
   secp: &Secp256k1<C>,
   msg: String,
-  seckey: [u8; 32],
+  seckey: Vec<u8>,
 ) -> Result<schnorr::Signature, SchnorrError> {
   let hash_from_hex = sha256::Hash::from_hex(&msg)?;
   let msg = Message::from_slice(hash_from_hex.as_ref())?;
@@ -276,14 +276,14 @@ mod tests {
   #[test]
   fn test_should_sign_schnorr_without_errors() {
     let sut: Sut = make_sut();
-    assert!(sign_schnorr(&sut.secp, sut.msg, sut.seckey).is_ok());
+    assert!(sign_schnorr(&sut.secp, sut.msg, sut.seckey.to_vec()).is_ok());
   }
 
   #[test]
   fn test_should_return_an_error_when_trying_to_sign_schnorr_with_invalid_secret_key() {
     let sut: Sut = make_sut();
     let invalid_seckey = [0x00; 32];
-    let result = sign_schnorr(&sut.secp, sut.msg, invalid_seckey);
+    let result = sign_schnorr(&sut.secp, sut.msg, invalid_seckey.to_vec());
     assert!(result.is_err());
     let expected_err_message = String::from("malformed or out-of-range secret key");
     let err_message = result.err().unwrap().to_string();
@@ -293,7 +293,7 @@ mod tests {
   #[test]
   fn test_should_verify_schnorr_without_errors() {
     let sut: Sut = make_sut();
-    let signature_schnorr = sign_schnorr(&sut.secp, sut.msg.clone(), sut.seckey).unwrap();
+    let signature_schnorr = sign_schnorr(&sut.secp, sut.msg.clone(), sut.seckey.to_vec()).unwrap();
     let seckey = SecretKey::from_slice(&sut.seckey).unwrap();
     let keypair = KeyPair::from_secret_key(&sut.secp, &seckey);
     let pubkey = XOnlyPublicKey::from_keypair(&keypair);
@@ -314,7 +314,7 @@ mod tests {
     let sut: Sut = make_sut();
     let hashed_msg = sha256::Hash::hash(b"another message");
     let msg = hashed_msg.to_hex();
-    let invalid_signature_schnorr = sign_schnorr(&sut.secp, msg, sut.seckey).unwrap();
+    let invalid_signature_schnorr = sign_schnorr(&sut.secp, msg, sut.seckey.to_vec()).unwrap();
     let seckey = SecretKey::from_slice(&sut.seckey).unwrap();
     let keypair = KeyPair::from_secret_key(&sut.secp, &seckey);
     let pubkey = XOnlyPublicKey::from_keypair(&keypair);
@@ -333,14 +333,14 @@ mod tests {
   #[test]
   fn test_should_sign_ecdsa_without_errors() {
     let sut: Sut = make_sut();
-    assert!(sign_ecdsa(&sut.secp, sut.msg, sut.seckey).is_ok());
+    assert!(sign_ecdsa(&sut.secp, sut.msg, sut.seckey.to_vec()).is_ok());
   }
 
   #[test]
   fn test_should_return_an_error_when_trying_to_sign_ecdsa_with_invalid_secret_key() {
     let sut: Sut = make_sut();
     let invalid_seckey = [0x00; 32];
-    let result = sign_ecdsa(&sut.secp, sut.msg, invalid_seckey);
+    let result = sign_ecdsa(&sut.secp, sut.msg, invalid_seckey.to_vec());
     assert!(result.is_err());
     let expected_err_message = String::from("malformed or out-of-range secret key");
     let err_message = result.err().unwrap().to_string();
@@ -350,7 +350,7 @@ mod tests {
   #[test]
   fn test_should_verify_ecdsa_without_errors() {
     let sut: Sut = make_sut();
-    let signature_ecdsa = sign_ecdsa(&sut.secp, sut.msg.clone(), sut.seckey).unwrap();
+    let signature_ecdsa = sign_ecdsa(&sut.secp, sut.msg.clone(), sut.seckey.to_vec()).unwrap();
     assert!(verify_ecdsa(&sut.secp, sut.msg, signature_ecdsa, sut.pubkey.to_hex()).is_ok());
   }
 
@@ -359,7 +359,7 @@ mod tests {
     let sut: Sut = make_sut();
     let hashed_msg = sha256::Hash::hash(b"another message");
     let msg = hashed_msg.to_hex();
-    let invalid_signature_ecdsa = sign_ecdsa(&sut.secp, msg, sut.seckey).unwrap();
+    let invalid_signature_ecdsa = sign_ecdsa(&sut.secp, msg, sut.seckey.to_vec()).unwrap();
     let result = verify_ecdsa(
       &sut.secp,
       sut.msg,
@@ -377,7 +377,7 @@ mod tests {
     let sut: Sut = make_sut();
 
     // ECDSA
-    let signature_ecdsa = sign_ecdsa(&sut.secp, sut.msg.clone(), sut.seckey).unwrap();
+    let signature_ecdsa = sign_ecdsa(&sut.secp, sut.msg.clone(), sut.seckey.to_vec()).unwrap();
     assert!(verify_ecdsa(
       &sut.secp,
       sut.msg.clone(),
@@ -387,7 +387,7 @@ mod tests {
     .is_ok());
 
     // Schnorr
-    let signature_schnorr = sign_schnorr(&sut.secp, sut.msg.clone(), sut.seckey).unwrap();
+    let signature_schnorr = sign_schnorr(&sut.secp, sut.msg.clone(), sut.seckey.to_vec()).unwrap();
     let seckey = SecretKey::from_slice(&sut.seckey).unwrap();
     let keypair = KeyPair::from_secret_key(&sut.secp, &seckey);
     let pubkey = XOnlyPublicKey::from_keypair(&keypair);
